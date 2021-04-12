@@ -134,9 +134,10 @@ let ged_features = L.geoJSON(undefined,{
       pointToLayer: (feature,latlng)=>{
          layer = L.circleMarker(latlng, {
             radius: 4+(feature.properties.best),
-            color: "#bb4422",
-            fillOpacity: 0.6,
-            weight: 0
+            color: "black",
+            fillColor:"#992222",
+            fillOpacity: 0.7, 
+            weight: 2
          });
          layer.bindPopup(`
             Casualties: ${feature.properties.best}
