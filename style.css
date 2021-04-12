@@ -1,0 +1,45 @@
+div#map-element {
+   height: 100vh
+}
+
+body,html {
+   padding: 0px;
+   margin: 0px;
+   font-size: 22px;
+}
+
+div#overlay {
+   top: 0;
+   left: 0;
+   position: absolute;
+   display: grid;
+   grid-template-columns: 400px 1fr 200px;
+   height: 100vh;
+   width: 100vw;
+   pointer-events: none;
+   z-index: 9999;
+   color: #f0f0f0;
+}
+
+.sidebar:first-child {
+   opacity: 1;
+   padding: 0 20px;
+}
+
+.viewport {
+   padding: 0 20px;
+}
+
+span.boxed {
+   background-color: #223344;
+   padding: 0 8px;
+   color: white
+}
+
+span.good{
+   background-color: green;
+}
+
+span.bad{
+   background-color: red;
+}

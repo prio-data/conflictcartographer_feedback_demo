@@ -1,0 +1,25 @@
+<html>
+   <head>
+      <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+      <link rel="stylesheet" href="style.css">
+   </head>
+   <body>
+      <div id="map-element">
+      </div>
+      <div id="overlay">
+         <div class="sidebar">
+            <h1><span class="boxed">Layer</span></h1>
+            <div id="selected"></div>
+         </div>
+         <div class="viewport">
+            <h1><span class="boxed">Evaluation metrics</span></h1>
+         </div>
+         <div class="sidebar"></div>
+      </div>
+      <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+      <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/Turf.js/6.3.0/turf.min.js"></script> 
+      <script src="https://cdn.jsdelivr.net/npm/preact/dist/preact.min.js"></script>
+      <script src="main.js"></script>
+   </body>
+</html>
