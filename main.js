@@ -1,5 +1,5 @@
 const {Component,h,render} = window.preact;
-const {area,intersect,union,buffer} = window.turf;
+const {area,intersect,union,buffer,pointsWithinPolygon} = window.turf;
 
 const map = L.map('map-element',{zoomControl:false}).setView([17.5, -0.0], 6);
 
@@ -39,7 +39,8 @@ let state = {
 
 let controls = {
    buffer_size: 40,
-   selected: undefined
+   selected: undefined,
+   metric: "coverage",
 }
 
 let get_from_state = (state,what)=>{
@@ -79,6 +80,10 @@ const preds_table = (state) =>{
             row.properties.intensity,
             row.properties.confidence,
             `${Math.round(row.properties.cov*4)/4}\t%`,
+            row.properties.lower,
+            row.properties.upper,
+            row.properties.actual,
+            row.properties.correct?"Yes":"No",
          ]
       })
       .join("td")
@@ -103,7 +108,6 @@ const update = (map,state,controls) =>{
    state = add_handlers(state,controls)
 
    state = viz_update(state,controls)
-
 
    Object.values(layers).forEach(lyr=>map.addLayer(lyr))
 
@@ -139,13 +143,28 @@ const evaluate_predictions = (state,_) => {
          state.buffered.geojson,
          ftr
       )
+      let ged_events = pointsWithinPolygon(state.ged.geojson,ftr)
+      let actual = 0
+      if(ged_events.features.length > 0){
+         actual = ged_events.features
+            .map(ftr=>ftr.properties.best)
+            .reduce((a,b)=>a+b)
+      }
 
-      intersect_prop = 0
+      ftr.properties.actual = actual
+      let {lower,upper} = SCALE[ftr.properties.intensity]
+      ftr.properties.lower = lower 
+      ftr.properties.upper = upper
+
+      ftr.properties.correct = lower <= actual && upper >= actual
+
+      let intersect_prop = 0
       if(itr){
          intersect_prop = area(itr) / area(ftr) * 100
       }
       ftr.properties.cov = intersect_prop
    })
+   
    return state
 }
 
@@ -173,11 +192,21 @@ let calculate_buffered = (state,controls) =>{
 
 let restyle_preds = (state,controls)=>{
    state.preds.layer.eachLayer(lyr=>{
-      lyr.setStyle(DEFAULT_PRED_STYLE)
-         result_pst = lyr.feature.properties.cov
-      lyr.setStyle({
-         color: red_green_pst(result_pst)
-      })
+      switch(controls.metric){
+         case "accuracy": 
+            lyr.setStyle(DEFAULT_PRED_STYLE)
+            lyr.setStyle({
+               color: lyr.feature.properties.correct?"green":"red"
+            })
+            break
+         case "coverage":
+            lyr.setStyle(DEFAULT_PRED_STYLE)
+            result_pst = lyr.feature.properties.cov
+            lyr.setStyle({
+               color: red_green_pst(result_pst)
+            })
+            break
+      }
       let selected = lyr === controls.selected
       if(selected){
          lyr.setStyle({
@@ -201,6 +230,8 @@ let restyle_buffered = (state) =>{
    return state
 }
 
+/* Initialization */
+
 let ged_resp = axios.get("data/ged.geojson")
    .then((r)=>{
       state.ged.geojson = r.data
@@ -216,6 +247,13 @@ axios.get("data/preds.geojson")
 let update_button = document.querySelector("button#update-button")
 update_button.onclick = ()=>{
    update(map,state,controls)
+}
+
+let mode_selector = document.querySelector("select[name='mode-selector']")
+mode_selector.onchange = ()=>{
+   controls.metric = mode_selector.value
+   viz_update(state,controls)
+   //update(map,state,controls)
 }
 
 let header = d3.select("#show-preds")
