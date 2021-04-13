@@ -7,19 +7,31 @@
       <div id="map-element">
       </div>
       <div id="overlay">
-         <div class="sidebar">
-            <h1><span class="boxed">Layer</span></h1>
-            <div id="selected"></div>
+         <div class="header">
+            <p class="title">Evaluation metric testing</p>
          </div>
-         <div class="viewport">
-            <h1><span class="boxed">Evaluation metrics</span></h1>
+         <div class="overlay-body">
+            <div></div>
+            <div class="viewport"></div>
+            <div>
+               <table id="show-preds">
+               </table>
+            </div>
          </div>
-         <div class="sidebar"></div>
+         <div class="footer">
+            <p>Event padding radius:</p>
+            <input name="buffer-size" value=50 type="number">
+            <button id="update-button">Update</button>
+         </div>
       </div>
       <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
       <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
       <script src="https://cdnjs.cloudflare.com/ajax/libs/Turf.js/6.3.0/turf.min.js"></script> 
       <script src="https://cdn.jsdelivr.net/npm/preact/dist/preact.min.js"></script>
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/6.6.2/d3.min.js"></script>
+      <script src="util.js"></script>
+      <script src="constants.js"></script>
+      <script src="styling.js"></script>
       <script src="main.js"></script>
    </body>
 </html>

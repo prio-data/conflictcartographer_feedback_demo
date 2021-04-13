@@ -5,7 +5,6 @@ div#map-element {
 body,html {
    padding: 0px;
    margin: 0px;
-   font-size: 22px;
 }
 
 div#overlay {
@@ -13,33 +12,51 @@ div#overlay {
    left: 0;
    position: absolute;
    display: grid;
-   grid-template-columns: 400px 1fr 200px;
+   grid-template-rows: 50px 1fr 50px;
    height: 100vh;
    width: 100vw;
    pointer-events: none;
    z-index: 9999;
-   color: #f0f0f0;
 }
 
-.sidebar:first-child {
-   opacity: 1;
+div#overlay>div:nth-child(odd){
+   background: #fff;
    padding: 0 20px;
+   border: 2px solid black;
+   font-size: 20px;
+   line-height: 6px;
+   pointer-events: auto;
 }
 
-.viewport {
-   padding: 0 20px;
+.overlay-body {
+   display: grid;
+   grid-template-columns: 100px 1fr 500px
+
+}
+.overlay-body>div:last-child{
+   background: #fff;
+   border-left: 2px solid black;
+   border-right: 2px solid black;
+   pointer-events: auto;
 }
 
-span.boxed {
-   background-color: #223344;
-   padding: 0 8px;
-   color: white
+div#overlay>div>*{
+   display: inline-block;
 }
 
-span.good{
-   background-color: green;
+p.title {
+   font-weight: bold;
+   color: red;
 }
 
-span.bad{
-   background-color: red;
+tr.selected {
+   color: red;
+}
+
+.leaflet-popup {
+   pointer-events: none;
+}
+
+.nopointer-layer {
+   pointer-events: none !important;
 }

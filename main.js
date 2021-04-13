@@ -1,6 +1,7 @@
 const {Component,h,render} = window.preact;
+const {area,intersect,union,buffer} = window.turf;
 
-const map = L.map('map-element',{zoomControl:false}).setView([16.29, -5.25], 6);
+const map = L.map('map-element',{zoomControl:false}).setView([17.5, -0.0], 6);
 
 var Stamen_Toner = L.tileLayer('https://stamen-tiles-{s}.a.ssl.fastly.net/toner/{z}/{x}/{y}{r}.{ext}', {
 	attribution: 'Map tiles by <a href="http://stamen.com">Stamen Design</a>, <a href="http://creativecommons.org/licenses/by/3.0">CC BY 3.0</a> &mdash; Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
@@ -10,155 +11,221 @@ var Stamen_Toner = L.tileLayer('https://stamen-tiles-{s}.a.ssl.fastly.net/toner/
 	ext: 'png'
 }).addTo(map)
 
-const scale = {
-   0:{lower:0,upper:1},
-   1:{lower:2,upper:25},
-   2:{lower:26,upper:99},
-   3:{lower:100,upper:999},
-   4:{lower:1000,upper:99999},
-}
-
-let ged = {"type":"FeatureCollection","features":[]}
-let preds = {"type":"FeatureCollection","features":[]}
-let selected = undefined
-
-let DEFAULT_PRED_STYLE = {
-   color: "#aabbcc",
-   weight: 4,
-   fillOpacity: 0.4,
-   opacity: 0.8,
-}
-
-const showSelected = (selected)=>{
-   let element = document.querySelector("#selected")
-   if(selected !== undefined){
-      let props = selected.feature.properties
-      let predicted = scale[props.intensity]
-      let pred_formatted = `${predicted.lower}-${predicted.upper}`
-      let correct = props.correct 
-      display = `
-         <p class="statistic">
-            <span class="boxed">Actual</span>
-            <span class="boxed">${props.actual}</span>
-         </p> 
-         <p class="statistic">
-            <span class="boxed">Prediction</span>
-            <span class="boxed">${pred_formatted}</span><br>
-         </p>
-         <p class="statistic">
-            <span class="boxed">Discrepancy</span>
-            <span class="boxed">${props.discrepancy}</span><br>
-         </p>
-         <p class="statistic">
-            <span class="boxed">Verdict</span>
-            <span class="boxed${correct?" good":" bad"}">
-               ${correct? "Was correct":"Not correct"}
-            </span>
-         </p>
-      `
-   } else {
-      display = "" 
-   }
-   element.innerHTML = display
-}
-
-let pred_features = L.geoJSON(undefined,{
-      onEachFeature: (ftr,lyr)=>{
-         let ged_for_feature = turf.pointsWithinPolygon(ged,ftr)
-
-         let casualties = 0
-         if(ged_for_feature.features.length > 0){
-            casualties = ged_for_feature
-               .features
-               .map(ftr=>ftr.properties.best)
-               .reduce((a,b)=>a+b)
+let state = {
+   preds: {
+      geojson:empty_fc(), 
+      layer:L.geoJSON(undefined,)
+   },
+   buffered: {
+      geojson:empty_fc(), 
+      layer:L.geoJSON(undefined,{
+         style:{
+            className: "nopointer-layer"
          }
-         let {lower,upper} = scale[ftr.properties.intensity]
-
-         ftr.properties.lower = lower
-         ftr.properties.upper = upper
-         ftr.properties.correct = lower <=casualties && upper >= casualties
-           
-         let discrepancy = {
-            lower: casualties - lower,
-            upper: upper - casualties,
-            abs : 0
+      })
+   },
+   ged: {
+      geojson: empty_fc(), 
+      layer:L.geoJSON(undefined,{
+         pointToLayer: (_,latlng)=>{
+            return L.circleMarker(latlng,GED_STYLE)
+         },
+         style: {
+            className: "nopointer-layer"
          }
+      })
+   },
+}
 
-         discrepancy.abs = discrepancy.lower > 0? discrepancy.lower:0
-         discrepancy.abs = discrepancy.upper < 0? discrepancy.upper:0
+let controls = {
+   buffer_size: 40,
+   selected: undefined
+}
 
-         ftr.properties.correct = discrepancy.abs == 0
-         ftr.properties.discrepancy = Math.abs(discrepancy.abs)
-         ftr.properties.actual = casualties
-
-         lyr.on("mouseover",(e)=>{
-            selected = e.target
-            showSelected(selected)
-            restyle_preds()
-         })
-         lyr.on("mouseout",()=>{
-            selected = undefined 
-            showSelected(selected)
-            restyle_preds()
-         })
-
-         lyr.bindPopup(`
-            Predicted: 
-            ${scale[ftr.properties.intensity].lower} - 
-            ${scale[ftr.properties.intensity].upper}
-            <br>
-            Actual: ${ftr.properties.actual}
-         `)
-         return ftr
-      },
+let get_from_state = (state,what)=>{
+   let obj = {}
+   Object.entries(state).forEach(entries=>{
+      let [key,val] = entries
+      obj[key] = val[what]
    })
-   .addTo(map)
+   return obj
+}
+let get_geojson = (state)=>get_from_state(state,"geojson")
+let get_layers = (state)=>get_from_state(state,"layer")
 
-let restyle_preds = ()=>{
-   pred_features.eachLayer(lyr=>{
+const read_controls = (controls) => {
+   let ctrl = document.querySelector("input[name='buffer-size']")
+   controls.buffer_size = Number.parseInt(ctrl.value)
+   return controls
+}
+
+const preds_table = (state) =>{
+   let table = d3.select("#show-preds")
+   
+
+   let rows = table
+      .selectAll("tr:not(.table-header)")
+      .data(state.preds.geojson.features)
+      .join("tr")
+      .classed("selected",false)
+
+   rows.filter(row=>row.properties.selected)
+      .classed("selected",true)
+
+   rows
+      .selectAll("td")
+      .data(row=>{
+         return [ 
+            row.properties.intensity,
+            row.properties.confidence,
+            Math.round(row.properties.cov*4)/4,
+         ]
+      })
+      .join("td")
+         .text(e=>e)
+
+   return state
+}
+
+const update = (map,state,controls) =>{
+   controls = read_controls(controls)
+   let layers = get_layers(state)
+
+   Object.values(layers).forEach(lyr=>{
+      map.removeLayer(lyr)
+      lyr.clearLayers()
+   })
+
+   state = calculate_buffered(state,controls)
+   state = evaluate_predictions(state,controls)
+   
+   state = data_to_layers(state)
+   state = pred_popups(state)
+   state = add_handlers(state,controls)
+
+   state = viz_update(state,controls)
+
+
+   Object.values(layers).forEach(lyr=>map.addLayer(lyr))
+
+   return map
+}
+
+const viz_update = (state,controls)=>{
+   console.log("updating visuals")
+   state = restyle_buffered(state)
+   state = restyle_preds(state,controls)
+   state = preds_table(state)
+   return state
+}
+
+const add_handlers = (state,controls)=>{
+   state.preds.layer.eachLayer(lyr=>{
+      lyr.on("mouseover",e=>{
+         e.target.openPopup()
+         controls.selected = e.target
+         e.target.feature.properties.selected = true
+         viz_update(state,controls)
+      })
+      lyr.on("mouseout",e=>{
+         e.target.closePopup()
+         controls.selected = undefined 
+         e.target.feature.properties.selected = false 
+         viz_update(state,controls)
+      })
+   })
+   return state
+}
+
+const evaluate_predictions = (state,_) => {
+   state.preds.geojson.features.forEach(ftr=>{
+      let itr = intersect(
+         state.buffered.geojson,
+         ftr
+      )
+
+      intersect_prop = 0
+      if(itr){
+         intersect_prop = area(itr) / area(ftr) * 100
+      }
+      ftr.properties.cov = intersect_prop
+   })
+   return state
+}
+
+const pred_popups = (state)=>{
+   state.preds.layer.eachLayer(lyr=>{
+      lyr.bindPopup(()=>{
+         return JSON.stringify(lyr.feature.properties)
+      })
+   })
+   return state
+}
+
+let data_to_layers = (state)=> {
+   Object.values(state).forEach(entry=>{
+      entry.layer.addData(entry.geojson)
+   })
+   return state
+}
+
+let calculate_buffered = (state,controls) =>{
+   state.buffered.geojson = (buffer(state.ged.geojson,controls.buffer_size))
+      .features.reduce(union)
+   return state
+}
+
+let restyle_preds = (state,controls)=>{
+   state.preds.layer.eachLayer(lyr=>{
       lyr.setStyle(DEFAULT_PRED_STYLE)
-      if(lyr.feature.properties.correct){
-         lyr.setStyle({color:"#55dd55"})
-      } else {
-         lyr.setStyle({color:"#dd5555"})
-         lyr.setStyle({fillOpacity:0.1+Math.min(0.9,(0.9*(lyr.feature.properties.discrepancy/100)))})
-      }
-      if(lyr === selected){
-         lyr.setStyle({fillOpacity:0.8})
+         result_pst = lyr.feature.properties.cov
+      lyr.setStyle({
+         color: red_green_pst(result_pst)
+      })
+      let selected = lyr === controls.selected
+      if(selected){
+         lyr.setStyle({
+            weight: 10
+         })
+
       }
    })
+   return state
 }
 
-let ged_features = L.geoJSON(undefined,{
-      pointToLayer: (feature,latlng)=>{
-         layer = L.circleMarker(latlng, {
-            radius: 4+(feature.properties.best),
-            color: "black",
-            fillColor:"#992222",
-            fillOpacity: 0.7, 
-            weight: 2
-         });
-         layer.bindPopup(`
-            Casualties: ${feature.properties.best}
-         `)
-         return layer
-      }
+let restyle_buffered = (state) =>{
+   state.buffered.layer.eachLayer(lyr=>{
+      lyr.setStyle({
+         color: "black",
+         fillColor: "#ccaacc",
+         fillOpacity: 0.7,
+         weigth: 2,
+      })
    })
-   .addTo(map)
-
+   return state
+}
 
 let ged_resp = axios.get("data/ged.geojson")
    .then((r)=>{
-      ged = r.data
-      ged_features.addData(r.data)
+      state.ged.geojson = r.data
    })
 
 axios.get("data/preds.geojson")
    .then(async (r)=>{
       await ged_resp
-      preds = r.data
-      pred_features.addData(r.data)
-      ged_features.bringToFront()
-      restyle_preds()
+      state.preds.geojson = r.data
+      update(map,state,controls)
    })
+
+let update_button = document.querySelector("button#update-button")
+update_button.onclick = ()=>{
+   update(map,state,controls)
+}
+
+let header = d3.select("#show-preds")
+   .append("tr")
+   .classed("table-header",true)
+
+HEADER.forEach(hdr=>{
+   header.append("th").text(hdr)
+})
