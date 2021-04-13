@@ -7,4 +7,4 @@ const SCALE = {
    4:{lower:1000,upper:99999},
 }
 
-const HEADER = ["confidence","intensity","coverage"]
+const HEADER = ["intensity","confidence","coverage"]
