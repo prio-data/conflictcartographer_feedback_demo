@@ -5,6 +5,7 @@ div#map-element {
 body,html {
    padding: 0px;
    margin: 0px;
+   font-family: raleway;
 }
 
 div#overlay {

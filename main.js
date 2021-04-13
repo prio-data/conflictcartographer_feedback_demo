@@ -78,7 +78,7 @@ const preds_table = (state) =>{
          return [ 
             row.properties.intensity,
             row.properties.confidence,
-            Math.round(row.properties.cov*4)/4,
+            `${Math.round(row.properties.cov*4)/4}\t%`,
          ]
       })
       .join("td")
@@ -111,7 +111,6 @@ const update = (map,state,controls) =>{
 }
 
 const viz_update = (state,controls)=>{
-   console.log("updating visuals")
    state = restyle_buffered(state)
    state = restyle_preds(state,controls)
    state = preds_table(state)
