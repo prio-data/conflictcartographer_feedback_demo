@@ -51,6 +51,18 @@ p.title {
 
 tr.selected {
    color: red;
+   font-weight: bold;
+   background-color: #ffdddd !important;
+}
+
+table>tr:nth-child(odd){
+   background-color: #f0f0f0
+}
+
+table {
+   width: 100%;
+   margin: 10px 0;
+   padding: 0 10px;
 }
 
 .leaflet-popup {

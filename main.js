@@ -100,7 +100,6 @@ const update = (map,state,controls) =>{
    state = evaluate_predictions(state,controls)
    
    state = data_to_layers(state)
-   state = pred_popups(state)
    state = add_handlers(state,controls)
 
    state = viz_update(state,controls)
@@ -122,13 +121,11 @@ const viz_update = (state,controls)=>{
 const add_handlers = (state,controls)=>{
    state.preds.layer.eachLayer(lyr=>{
       lyr.on("mouseover",e=>{
-         e.target.openPopup()
          controls.selected = e.target
          e.target.feature.properties.selected = true
          viz_update(state,controls)
       })
       lyr.on("mouseout",e=>{
-         e.target.closePopup()
          controls.selected = undefined 
          e.target.feature.properties.selected = false 
          viz_update(state,controls)
