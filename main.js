@@ -223,7 +223,7 @@ const evaluate_predictions = (state,_) => {
       )
       let intersect_prop = 0
       if(itr){
-         if([1,99].includes(ftr.properties.intensity)){
+         if([0,99].includes(ftr.properties.intensity)){
             intersect_prop = 100 - (area(itr) / area(ftr) * 100)
          } else {
             intersect_prop = area(itr) / area(ftr) * 100
@@ -350,7 +350,7 @@ axios.get("data/preds.geojson")
          ftr.properties.predicted = false
       })
       state.preds.geojson.features.forEach(ftr=>{
-         if(![99,1].includes(ftr.properties.intensity)){
+         if(![99,0].includes(ftr.properties.intensity)){
             let points = pointsWithinPolygon(state.ged.geojson,ftr)
             points.features.forEach(ftr=>{
                ftr.properties.predicted = true
