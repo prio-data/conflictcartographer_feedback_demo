@@ -111,7 +111,7 @@ const show_metric = (state,controls)=>{
       number_correct = state.preds.geojson.features
          .map(ftr=>ftr.properties.correct)
          .reduce((a,b)=>a+b)
-      metric = number_correct / state.preds.geojson.features.length
+      metric = (number_correct / state.preds.geojson.features.length)*100
    }
 
    let preds = state.preds.geojson.features
