@@ -98,6 +98,42 @@ const preds_table = (state) =>{
    return state
 }
 
+const show_metric = (state,controls)=>{
+   let metric = 0
+   if(controls.metric == "coverage"){
+      metric_title = "Mean coverage"
+      sum = state.preds.geojson.features
+         .map(ftr=>ftr.properties.cov)
+         .reduce((a,b)=>a+b)
+      metric = sum / state.preds.geojson.features.length
+   } else {
+      metric_title = "Overall accuracy"
+      number_correct = state.preds.geojson.features
+         .map(ftr=>ftr.properties.correct)
+         .reduce((a,b)=>a+b)
+      metric = number_correct / state.preds.geojson.features.length
+   }
+
+   let preds = state.preds.geojson.features
+      .filter(ftr=>ftr.properties.intensity != 99)
+      .reduce(union)
+   let total_predicted = area(preds)
+
+   document.querySelector("#show-metric").innerHTML = `
+      <table>
+         <tr>
+            <td class="title">${metric_title}</td>
+            <td>${Math.round(metric*3)/3}%</td>
+         </tr>
+         <tr>
+            <td class="title">Total predicted area</td>
+            <td>${Math.round(total_predicted / 1000000)} sq.km</td>
+         </tr>
+      </table>
+   `
+   return state
+}
+
 const update = (map,state,controls) =>{
    controls = read_controls(controls)
    let layers = get_layers(state)
@@ -125,6 +161,7 @@ const viz_update = (state,controls)=>{
    state = restyle_buffered(state)
    state = restyle_preds(state,controls)
    state = preds_table(state)
+   state = show_metric(state,controls)
    state = restyle_ged(state,controls)
    return state
 }
@@ -242,7 +279,9 @@ let restyle_preds = (state,controls)=>{
          lyr.setStyle({
             weight: 10
          })
-
+      }
+      if(lyr.feature.properties.intensity == 99){
+         lyr.setStyle({fillOpacity: 0.1,opacity: 0.3})
       }
    })
    return state
