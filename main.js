@@ -115,7 +115,6 @@ const update = (map,state,controls) =>{
 
    state = viz_update(state,controls)
 
-   console.log(layers)
    filter_layers(layers,controls)
       .forEach(lyr => map.addLayer(lyr))
 
@@ -137,7 +136,6 @@ const filter_layers = (layers,controls)=>{
             return true
          } else {
             if(entry[0] == "buffered"){
-               console.log("yoo")
                return false
             } else {
                return true
@@ -298,9 +296,7 @@ axios.get("data/preds.geojson")
          })
 
       let all_preds = preds.features.reduce(union) 
-      console.log(all_preds)
       let nullpred = difference(mali,all_preds)
-      console.log(all_preds)
 
       nullpred.properties = {
          intensity: 99,
@@ -308,7 +304,6 @@ axios.get("data/preds.geojson")
       }
 
       preds.features.push(nullpred)
-      console.log(nullpred)
 
       state.preds.geojson = preds 
       
