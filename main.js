@@ -1,5 +1,5 @@
 const {Component,h,render} = window.preact;
-const {area,intersect,union,buffer,pointsWithinPolygon} = window.turf;
+const {difference,area,intersect,union,buffer,pointsWithinPolygon} = window.turf;
 
 const map = L.map('map-element',{zoomControl:false}).setView([17.5, -0.0], 6);
 
@@ -34,7 +34,7 @@ let state = {
             className: "nopointer-layer"
          }
       })
-   },
+   }
 }
 
 let controls = {
@@ -139,10 +139,7 @@ const add_handlers = (state,controls)=>{
 
 const evaluate_predictions = (state,_) => {
    state.preds.geojson.features.forEach(ftr=>{
-      let itr = intersect(
-         state.buffered.geojson,
-         ftr
-      )
+
       let ged_events = pointsWithinPolygon(state.ged.geojson,ftr)
       let actual = 0
       if(ged_events.features.length > 0){
@@ -158,9 +155,17 @@ const evaluate_predictions = (state,_) => {
 
       ftr.properties.correct = lower <= actual && upper >= actual
 
+      let itr = intersect(
+         state.buffered.geojson,
+         ftr
+      )
       let intersect_prop = 0
       if(itr){
-         intersect_prop = area(itr) / area(ftr) * 100
+         if([1,99].includes(ftr.properties.intensity)){
+            intersect_prop = 100 - (area(itr) / area(ftr) * 100)
+         } else {
+            intersect_prop = area(itr) / area(ftr) * 100
+         }
       }
       ftr.properties.cov = intersect_prop
    })
@@ -238,9 +243,28 @@ let ged_resp = axios.get("data/ged.geojson")
    })
 
 axios.get("data/preds.geojson")
-   .then(async (r)=>{
+   .then(async (preds_response)=>{
       await ged_resp
-      state.preds.geojson = r.data
+      let preds = preds_response.data
+      let mali
+      await axios.get("data/mali.geojson")
+         .then((r)=>{
+            mali = r.data
+         })
+
+      let all_preds = preds.features.reduce(union) 
+      console.log(all_preds)
+      let nullpred = difference(mali,all_preds)
+      console.log(all_preds)
+
+      nullpred.properties = {
+         intensity: 99,
+         confidence: 100
+      }
+      preds.features.push(nullpred)
+      console.log(nullpred)
+
+      state.preds.geojson = preds 
       update(map,state,controls)
    })
 
