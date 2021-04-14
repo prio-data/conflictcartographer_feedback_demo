@@ -1,3 +1,9 @@
+/*
+ * Hacky, quick prototype showing some ways to evaluate a set of polygon
+ * predictions of point data (ged events).
+ * 
+ * Written as a prototypel, to develop the metrics.
+ */
 const {Component,h,render} = window.preact;
 const {difference,area,intersect,union,buffer,pointsWithinPolygon} = window.turf;
 
@@ -109,7 +115,9 @@ const update = (map,state,controls) =>{
 
    state = viz_update(state,controls)
 
-   Object.values(layers).forEach(lyr=>map.addLayer(lyr))
+   console.log(layers)
+   filter_layers(layers,controls)
+      .forEach(lyr => map.addLayer(lyr))
 
    return map
 }
@@ -118,7 +126,26 @@ const viz_update = (state,controls)=>{
    state = restyle_buffered(state)
    state = restyle_preds(state,controls)
    state = preds_table(state)
+   state = restyle_ged(state,controls)
    return state
+}
+
+const filter_layers = (layers,controls)=>{
+   return Object.entries(layers)
+      .filter(entry=>{
+         if(controls.metric == "coverage"){
+            return true
+         } else {
+            if(entry[0] == "buffered"){
+               console.log("yoo")
+               return false
+            } else {
+               return true
+            }
+         }
+         return true
+      })
+      .map(entry=>entry[1])
 }
 
 const add_handlers = (state,controls)=>{
@@ -235,6 +262,24 @@ let restyle_buffered = (state) =>{
    return state
 }
 
+let restyle_ged = (state,controls)=>{
+   state.ged.layer.setStyle(GED_STYLE)
+   if(controls.metric == "coverage"){
+      state.ged.layer.eachLayer(lyr=>{
+         if(lyr.feature.properties.predicted){
+            lyr.setStyle({fillColor: "#aaffaa"})
+         } else {
+            lyr.setStyle({fillColor: "#993333"})
+         }
+      })
+   } else {
+      state.ged.layer.eachLayer(lyr=>{
+         lyr.setStyle({radius: 4 +(lyr.feature.properties.best)})
+      })
+   }
+   return state
+}
+
 /* Initialization */
 
 let ged_resp = axios.get("data/ged.geojson")
@@ -261,10 +306,24 @@ axios.get("data/preds.geojson")
          intensity: 99,
          confidence: 100
       }
+
       preds.features.push(nullpred)
       console.log(nullpred)
 
       state.preds.geojson = preds 
+      
+      state.ged.geojson.features.forEach(ftr=>{
+         ftr.properties.predicted = false
+      })
+      state.preds.geojson.features.forEach(ftr=>{
+         if(![99,1].includes(ftr.properties.intensity)){
+            let points = pointsWithinPolygon(state.ged.geojson,ftr)
+            points.features.forEach(ftr=>{
+               ftr.properties.predicted = true
+            })
+         }
+      })
+
       update(map,state,controls)
    })
 
@@ -276,7 +335,7 @@ update_button.onclick = ()=>{
 let mode_selector = document.querySelector("select[name='mode-selector']")
 mode_selector.onchange = ()=>{
    controls.metric = mode_selector.value
-   viz_update(state,controls)
+   update(map,state,controls)
    //update(map,state,controls)
 }
 
